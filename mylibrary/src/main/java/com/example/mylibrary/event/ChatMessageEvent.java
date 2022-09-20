@@ -1,6 +1,8 @@
 package com.example.mylibrary.event;
 
+import com.example.mylibrary.message.Message;
+
 public interface ChatMessageEvent {
-    void onRecieveMessage(String fingerPrintOfProtocal, String userid, String dataContent, int typeu);
+    void onReceiveMessage(Message message);
     void onErrorResponse(int errorCode, String errorMsg);
 }

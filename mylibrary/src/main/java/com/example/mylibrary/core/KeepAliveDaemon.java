@@ -1,5 +1,15 @@
 package com.example.mylibrary.core;
 
+import android.os.Handler;
+import android.util.Log;
+
+import com.example.mylibrary.IMCoreSDK;
+import com.example.mylibrary.utils.MBSimpleTimer;
+import com.example.mylibrary.utils.IMThreadPool;
+
+import java.util.Observer;
+import java.util.concurrent.atomic.AtomicLong;
+
 public class KeepAliveDaemon {
     private final static String TAG = KeepAliveDaemon.class.getSimpleName();
 
@@ -42,9 +52,9 @@ public class KeepAliveDaemon {
         keepAliveHandler = new Handler();
         keepAliveRunnable = () -> {
             if(!keepAliveTaskExcuting) {
-                MBThreadPoolExecutor.runInBackground(() -> {
+                IMThreadPool.runInBackground(() -> {
                     final int code = doKeepAlive();
-                    MBThreadPoolExecutor.runOnMainThread(() -> onKeepAlive(code));
+                    IMThreadPool.runOnMainThread(() -> onKeepAlive(code));
                 });
             }
         };
@@ -52,7 +62,7 @@ public class KeepAliveDaemon {
         keepAliveTimeoutTimer = new MBSimpleTimer(NETWORK_CONNECTION_TIME_OUT_CHECK_INTERVAL){
             @Override
             protected void doAction(){
-                if(ClientCoreSDK.DEBUG)
+                if(IMCoreSDK.DEBUG)
                     Log.i(TAG, "【IMCORE-TCP】心跳[超时检查]线程执行中...");
 
                 doTimeoutCheck();
@@ -65,11 +75,11 @@ public class KeepAliveDaemon {
 
     private int doKeepAlive() {
         keepAliveTaskExcuting = true;
-        if(ClientCoreSDK.DEBUG)
+        if(IMCoreSDK.DEBUG)
             Log.i(TAG, "【IMCORE-TCP】心跳包[发送]线程执行中...");
-        int code = LocalDataSender.getInstance().sendKeepAlive();
+//        int code = LocalDataSender.getInstance().sendKeepAlive();
 
-        return code;
+        return -1;
     }
 
     private void onKeepAlive(int code) {
@@ -93,7 +103,7 @@ public class KeepAliveDaemon {
         if(!isInitialedForKeepAlive) {
             long now = System.currentTimeMillis();
             if(now - lastGetKeepAliveResponseFromServerTimstamp.longValue() >= NETWORK_CONNECTION_TIME_OUT) {
-                if(ClientCoreSDK.DEBUG)
+                if(IMCoreSDK.DEBUG)
                     Log.w(TAG, "【IMCORE-TCP】心跳机制已判定网络断开，将进入断网通知和重连处理逻辑 ...");
 
                 notifyConnectionLost();

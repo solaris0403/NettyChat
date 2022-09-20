@@ -1,7 +1,9 @@
 package com.example.mylibrary.conf;
 
+import com.example.mylibrary.core.KeepAliveDaemon;
+
 public class ConfigEntity {
-    public static String serverIP = "192.168.0.190";//"rbcore.52im.net";
+    public static String serverIP = "192.168.0.3";//"rbcore.52im.net";
     public static int serverPort = 8901;
     public static int localPort = 0;//7801;
 
