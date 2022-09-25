@@ -3,15 +3,15 @@ package com.example.mylibrary.message;
 import android.util.Log;
 
 import com.example.mylibrary.IMCoreSDK;
+import com.example.mylibrary.utils.LogUtils;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
- * 消息分发中心，
+ * 消息分发
  */
 public class MessageDispatcher {
-    private static final String TAG = MessageDispatcher.class.getSimpleName();
     private static MessageDispatcher instance;
 
     public static MessageDispatcher getInstance() {
@@ -25,8 +25,8 @@ public class MessageDispatcher {
         return instance;
     }
 
-    private final BlockingQueue<byte[]> mMessagesReceiveQueue = new LinkedBlockingQueue<>();
-    private final BlockingQueue<Message> mMessagesSendQueue = new LinkedBlockingQueue<>();
+    private final ReceiveThread mReceiveThread = new ReceiveThread();
+    private final SendThread mSendThread = new SendThread();
 
     private MessageDispatcher() {
         mReceiveThread.start();
@@ -34,43 +34,52 @@ public class MessageDispatcher {
     }
 
     public void onReceive(byte[] data) {
-        mMessagesReceiveQueue.add(data);
+        mReceiveThread.add(data);
     }
 
     public void onSend(Message message) {
-        mMessagesSendQueue.add(message);
+        mSendThread.add(message);
     }
 
-    private Thread mReceiveThread = new Thread(new Runnable() {
+    private static class ReceiveThread extends Thread {
+        private final BlockingQueue<byte[]> receiveQueue = new LinkedBlockingQueue<>();
+
+        public void add(byte[] data) {
+            receiveQueue.add(data);
+        }
+
         @Override
         public void run() {
             while (true) {
                 try {
-                    byte[] data = mMessagesReceiveQueue.take();
+                    byte[] data = receiveQueue.take();
+                    //消息的具体处理交由业务层来实现
                     if (IMCoreSDK.getInstance().getMessageHandler() != null) {
                         IMCoreSDK.getInstance().getMessageHandler().onMessageReceive(data);
                     }
                 } catch (Exception e) {
-                    Log.e(TAG, "MessageDispatcher 消息接收异常：" + e.getMessage());
+                    LogUtils.e("MessageDispatcher消息接收异常：", e);
                 }
             }
         }
-    });
+    }
 
-    private Thread mSendThread = new Thread(new Runnable() {
+    private static class SendThread extends Thread {
+        private final BlockingQueue<Message> sendQueue = new LinkedBlockingQueue<>();
+        public void add(Message data) {
+            sendQueue.add(data);
+        }
+
         @Override
         public void run() {
             while (true) {
                 try {
-                    Message message = mMessagesSendQueue.take();
-                    if (IMCoreSDK.getInstance().getMessageHandler() != null) {
-                        byte[] data = IMCoreSDK.getInstance().getMessageHandler().onMessageSend(message);
-                        SendHelper.getInstance().send(data);
-                    }
+                    Message message = sendQueue.take();
+                    SendHelper.getInstance().send(message);
                 } catch (Exception e) {
-                    Log.e(TAG, "MessageDispatcher 消息发送异常：" + e.getMessage());
+                    LogUtils.e("MessageDispatcher消息发送异常：", e);
                 }
             }
         }
-    });
+    }
 }

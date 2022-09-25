@@ -2,9 +2,6 @@ package com.example.mylibrary;
 
 import android.app.Application;
 import android.content.Context;
-import android.content.IntentFilter;
-import android.net.ConnectivityManager;
-import android.util.Log;
 
 import com.example.mylibrary.core.KeepAliveDaemon;
 import com.example.mylibrary.core.SocketProvider;
@@ -12,9 +9,9 @@ import com.example.mylibrary.event.ChatBaseEvent;
 import com.example.mylibrary.event.ChatMessageEvent;
 import com.example.mylibrary.event.MessageQoSEvent;
 import com.example.mylibrary.message.IMessageHandler;
-import com.example.mylibrary.network.INetworkListener;
-import com.example.mylibrary.network.NetworkStateReceiver;
+import com.example.mylibrary.network.NetworkMonitor;
 import com.example.mylibrary.utils.IMThreadPool;
+import com.example.mylibrary.utils.LogUtils;
 
 public class IMCoreSDK {
     private final static String TAG = IMCoreSDK.class.getSimpleName();
@@ -32,7 +29,7 @@ public class IMCoreSDK {
     private ChatBaseEvent chatBaseEvent = null;
     private ChatMessageEvent chatMessageEvent = null;
     private MessageQoSEvent messageQoSEvent = null;
-    private Context context = null;
+    private Context context;
 
     private IMessageHandler mMessageHandler;
     private static IMCoreSDK instance;
@@ -69,10 +66,7 @@ public class IMCoreSDK {
             else {
                 this.context = context.getApplicationContext();
             }
-            //注册网络变化广播
-            IntentFilter intentFilter = new IntentFilter();
-            intentFilter.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
-            this.context.registerReceiver(mNetworkStateReceiver, intentFilter);
+            LogUtils.init(DEBUG, TAG);
 
             // TODO: 2022/9/20 线程池的初始化
             //初始化
@@ -81,6 +75,7 @@ public class IMCoreSDK {
 //            LocalDataReciever.getInstance();
 //            QoS4ReciveDaemon.getInstance();
 //            QoS4SendDaemon.getInstance();
+            NetworkMonitor.getInstance().start(this.context);
             _init = true;
         }
     }
@@ -97,7 +92,7 @@ public class IMCoreSDK {
      * 断开，关闭所有相关功能，释放所有资源
      */
     public void release() {
-        //关闭套接字
+        NetworkMonitor.getInstance().stop(this.context);
         SocketProvider.getInstance().closeSocket();
 //        AutoReLoginDaemon.getInstance().stop();
 //        QoS4SendDaemon.getInstance().stop();
@@ -106,12 +101,6 @@ public class IMCoreSDK {
 //        QoS4SendDaemon.getInstance().clear();
 //        QoS4ReciveDaemon.getInstance().clear();
 
-        //关闭注册的网络广播
-        try {
-            context.unregisterReceiver(mNetworkStateReceiver);
-        } catch (Exception e) {
-            Log.i(TAG, "还未注册android网络事件广播的监听器，本次取消注册已被正常忽略哦.");
-        }
         //更新断开标记
         this.setLoginHasInit(false);
         this.setConnectedToServer(false);
@@ -162,12 +151,4 @@ public class IMCoreSDK {
     public MessageQoSEvent getMessageQoSEvent() {
         return messageQoSEvent;
     }
-
-    private final NetworkStateReceiver mNetworkStateReceiver = new NetworkStateReceiver(new INetworkListener() {
-        @Override
-        public void onNetworkChange(boolean connected) {
-            // TODO: 2022/9/20
-            SocketProvider.getInstance().closeSocket();
-        }
-    });
 }

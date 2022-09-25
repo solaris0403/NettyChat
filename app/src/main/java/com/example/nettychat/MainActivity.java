@@ -43,15 +43,15 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.mylibrary.IMCoreSDK;
 import com.example.mylibrary.core.KeepAliveDaemon;
-import com.example.mylibrary.message.IMClient;
+import com.example.mylibrary.IMClient;
 import com.example.mylibrary.message.Message;
-import com.example.mylibrary.utils.IMAsyncTask;
+import com.example.mylibrary.utils.IMObserver;
+import com.example.mylibrary.utils.LogUtils;
 import com.example.nettychat.service.GeniusService;
 
 /**
@@ -174,6 +174,12 @@ public class MainActivity extends AppCompatActivity {
             // 发送消息（Android系统要求必须要在独立的线程中发送哦）
             Message message = new Message();
             message.setContent(msg);
+            message.setObserver(new IMObserver() {
+                @Override
+                public void update(boolean success, Object obj) {
+                    LogUtils.d(success);
+                }
+            });
             IMClient.send(message);
         } else {
             showIMInfo_red("接收者id或发送内容为空，发送没有继续!");

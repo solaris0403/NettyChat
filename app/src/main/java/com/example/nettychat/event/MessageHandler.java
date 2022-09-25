@@ -1,15 +1,9 @@
 package com.example.nettychat.event;
 
-import android.util.Log;
-
 import com.example.mylibrary.IMCoreSDK;
-import com.example.mylibrary.core.SocketProvider;
-import com.example.mylibrary.message.IMClient;
 import com.example.mylibrary.message.IMessageHandler;
 import com.example.mylibrary.message.Message;
 import com.example.mylibrary.utils.IMThreadPool;
-
-import net.x52im.mobileimsdk.server.protocal.ErrorCode;
 
 public class MessageHandler implements IMessageHandler {
     /**
