@@ -16,3 +16,4 @@ rootProject.name = "NettyChat"
 include ':app'
 include ':im_lib'
 include ':mylibrary'
+include ':nativelib'

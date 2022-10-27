@@ -23,6 +23,8 @@ public class DNSProvider {
         return instance;
     }
     private final List<DNS> dnsList = new ArrayList<>();
+
+    // TODO: 2022/9/25 对插入的地址进行去重
     public void put(String ip, int port){
         DNS dns = new DNS(ip, port);
         dnsList.add(dns);

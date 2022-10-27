@@ -167,6 +167,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void doSendMessage() {
+
         final String msg = editContent.getText().toString().trim();
 //		String friendId = editId.getText().toString().trim();
         if (msg.length() > 0) {

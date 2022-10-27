@@ -85,6 +85,7 @@ public class LogUtils {
         String format = tag + "::%s.%s:%d";
         String callerClazzName = caller.getClassName();
         callerClazzName = callerClazzName.substring(callerClazzName.lastIndexOf(".") + 1);
-        return String.format(format, callerClazzName, caller.getMethodName(), caller.getLineNumber());
+//        return String.format(format, callerClazzName, caller.getMethodName(), caller.getLineNumber());
+        return tag;
     }
 }

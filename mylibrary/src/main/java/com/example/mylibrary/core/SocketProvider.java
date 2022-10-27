@@ -21,10 +21,6 @@ import io.netty.channel.socket.nio.NioSocketChannel;
  * Socket维护类
  */
 public class SocketProvider {
-    private Bootstrap mBootstrap = null;
-    private Channel mSocket = null;
-
-    private IMObserver connectionDoneObserver;
     private static SocketProvider instance;
 
     private SocketProvider() {
@@ -41,6 +37,10 @@ public class SocketProvider {
         return instance;
     }
 
+    private Bootstrap mBootstrap = null;
+    private Channel mSocket = null;
+
+    private IMObserver connectionDoneObserver;
 
     /**
      * 初始化Socket连接配置
@@ -55,26 +55,50 @@ public class SocketProvider {
             mBootstrap.option(ChannelOption.TCP_NODELAY, true);
             mBootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, IMConfig.SOCKET_CONNECT_TIMEOUT_MILLIS);
         } catch (Exception e) {
-            LogUtils.w("Socket初始化出错：" + e.getMessage(), e);
+            LogUtils.w("initBootstrap()出错：" + e.getMessage(), e);
         }
     }
 
-    public void setConnectionDoneObserver(IMObserver connectionDoneObserver) {
-        this.connectionDoneObserver = connectionDoneObserver;
+    /**
+     * 关闭Socket
+     */
+    public void closeSocket() {
+        LogUtils.d("closeSocket()...");
+        if (mBootstrap != null) {
+            try {
+                mBootstrap.config().group().shutdownGracefully();
+                mBootstrap = null;
+            } catch (Exception e) {
+                LogUtils.w("在closeSocket方法中释放Bootstrap资源时出错：", e);
+            }
+        }
+
+        if (mSocket != null) {
+            try {
+                mSocket.close();
+                mSocket = null;
+            } catch (Exception e) {
+                LogUtils.w("在closeSocket方法中试图释放Socket资源时：", e);
+            }
+        }
     }
 
     /**
-     * 重置Socket
+     * 关闭之前的socket，重新开始一个socket连接
      *
      * @return Socket
      */
     public Channel resetSocket() {
+        if (!Auth.getInstance().isAuth()) {
+            LogUtils.i("Auth未认证");
+            return null;
+        }
         try {
             closeSocket();
             initBootstrap();
             tryConnectToHost();
         } catch (Exception e) {
-            LogUtils.w( "【IMCORE-TCP】重置Socket出错：" + e.getMessage(), e);
+            LogUtils.w("resetSocket()出错：" + e.getMessage(), e);
             closeSocket();
         }
         return mSocket;
@@ -84,11 +108,8 @@ public class SocketProvider {
      * 连接Socket，属于异步方法，连接结果会通过回调传递
      */
     private void tryConnectToHost() {
-        if (IMCoreSDK.DEBUG) {
-            LogUtils.d( "【IMCORE-TCP】tryConnectToHost并获取connection开始了...");
-        }
-
         try {
+            LogUtils.d("tryConnectToHost：连接开始");
             ChannelFuture cf = mBootstrap.connect(ConfigEntity.serverIP, ConfigEntity.serverPort);
             mSocket = cf.channel();
             cf.addListener(new ChannelFutureListener() {
@@ -96,11 +117,11 @@ public class SocketProvider {
                 public void operationComplete(ChannelFuture channelFuture) throws Exception {
                     if (channelFuture.isDone()) {
                         if (channelFuture.isCancelled()) {
-                            LogUtils.w("【IMCORE-tryConnectToHost-异步回调】Connection attempt cancelled by user");
+                            LogUtils.w("tryConnectToHost：异步回调-连接被取消");
                         } else if (!channelFuture.isSuccess()) {
-                            LogUtils.w("【IMCORE-tryConnectToHost-异步回调】连接失败，原因是：", channelFuture.cause());
+                            LogUtils.w("tryConnectToHost：异步回调-连接失败", channelFuture.cause());
                         } else {
-                            LogUtils.i( "【IMCORE-tryConnectToHost-异步回调】Connection established successfully");
+                            LogUtils.i("tryConnectToHost：异步回调-连接成功");
                         }
                         if (connectionDoneObserver != null) {
                             connectionDoneObserver.update(channelFuture.isSuccess(), null);
@@ -111,19 +132,16 @@ public class SocketProvider {
             });
 
             mSocket.closeFuture().addListener((ChannelFutureListener) future -> {
-                LogUtils.i( "【IMCORE-TCP】channel优雅退出开始。。。");
+                LogUtils.i("tryConnectToHost：异步回调-mSocket正常关闭");
                 if (future.channel() != null) {
                     future.channel().eventLoop().shutdownGracefully();
                 }
                 mSocket = null;
-                LogUtils.i( "【IMCORE-TCP】channel优雅退出结束。");
             });
-
-            if (IMCoreSDK.DEBUG) {
-                LogUtils.d( "【IMCORE-TCP】tryConnectToHost并获取connection已完成。 .... continue ...");
-            }
         } catch (Exception e) {
-            LogUtils.e( String.format("【IMCORE-TCP】连接Server(IP[%s],PORT[%s])失败", ConfigEntity.serverIP, ConfigEntity.serverPort), e);
+            LogUtils.e(String.format("连接Server(IP[%s],PORT[%s])失败", ConfigEntity.serverIP, ConfigEntity.serverPort), e);
+        } finally {
+            LogUtils.d("tryConnectToHost：连接结束");
         }
     }
 
@@ -144,34 +162,7 @@ public class SocketProvider {
         }
     }
 
-    /**
-     * 关闭Socket
-     */
-    public void closeSocket() {
-        if (IMCoreSDK.DEBUG) {
-            LogUtils.d( "【IMCORE-TCP】正在closeSocket()...");
-        }
-
-        if (mBootstrap != null) {
-            try {
-                mBootstrap.config().group().shutdownGracefully();
-                mBootstrap = null;
-            } catch (Exception e) {
-                LogUtils.w( "【IMCORE-TCP】在closeSocket方法中试图释放Bootstrap资源时：", e);
-            }
-        }
-
-        if (mSocket != null) {
-            try {
-                mSocket.close();
-                mSocket = null;
-            } catch (Exception e) {
-                LogUtils.w( "【IMCORE-TCP】在closeSocket方法中试图释放Socket资源时：", e);
-            }
-        } else {
-            if (IMCoreSDK.DEBUG) {
-                LogUtils.d( "【IMCORE-TCP】Socket == null，无需关闭。");
-            }
-        }
+    public void setConnectionDoneObserver(IMObserver connectionDoneObserver) {
+        this.connectionDoneObserver = connectionDoneObserver;
     }
 }

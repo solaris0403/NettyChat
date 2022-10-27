@@ -3,6 +3,7 @@ package com.example.mylibrary;
 import android.app.Application;
 import android.content.Context;
 
+import com.example.mylibrary.core.Auth;
 import com.example.mylibrary.core.KeepAliveDaemon;
 import com.example.mylibrary.core.SocketProvider;
 import com.example.mylibrary.event.ChatBaseEvent;
@@ -61,13 +62,13 @@ public class IMCoreSDK {
             if (!IMThreadPool.isOnMainThread()) {
                 throw new IllegalArgumentException("init must in main thread!");
             }
-            if (context instanceof Application)
+            if (context instanceof Application) {
                 this.context = context;
-            else {
+            } else {
                 this.context = context.getApplicationContext();
             }
             LogUtils.init(DEBUG, TAG);
-
+            Auth.getInstance().setAuth(true);
             // TODO: 2022/9/20 线程池的初始化
             //初始化
 //            AutoReLoginDaemon.getInstance();
